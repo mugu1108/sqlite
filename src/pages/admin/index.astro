@@ -1,0 +1,156 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { DBClient } from '../../db/client.js';
+
+const db = new DBClient();
+const posts = await db.getAllPosts();
+db.close();
+---
+
+<Layout title="ブログ管理画面">
+  <main>
+    <h1>ブログ管理画面</h1>
+    <div class="admin-actions">
+      <a href="/admin/new" class="button">新規投稿</a>
+    </div>
+    <div class="posts">
+      {posts.map(post => (
+        <div class="post-card">
+          <h2>{post.title}</h2>
+          <div class="metadata">
+            <time>{new Date(post.date).toLocaleDateString('ja-JP')}</time>
+            <div class="tags">
+              {post.tags.map((tag: string) => (
+                <span class="tag">{tag}</span>
+              ))}
+            </div>
+          </div>
+          <div class="actions">
+            <a href={`/admin/edit/${post.slug}`} class="button">編集</a>
+            <button class="button delete" data-slug={post.slug}>削除</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  </main>
+</Layout>
+
+<script>
+  document.querySelectorAll('.delete').forEach(button => {
+    button.addEventListener('click', async (e) => {
+      const slug = (e.target as HTMLButtonElement).dataset.slug;
+      if (!slug) return;
+      
+      if (confirm('本当に削除しますか？')) {
+        try {
+          const response = await fetch(`/api/posts/${slug}`, {
+            method: 'DELETE',
+          });
+          
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            alert('削除に失敗しました');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('削除に失敗しました');
+        }
+      }
+    });
+  });
+</script>
+
+<style>
+  main {
+    margin: auto;
+    padding: 1rem;
+    width: 800px;
+    max-width: calc(100% - 2rem);
+    color: white;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    background-image: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .admin-actions {
+    margin-bottom: 2rem;
+    text-align: right;
+  }
+
+  .posts {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .post-card {
+    border: 1px solid rgba(var(--accent-light), 25%);
+    background: linear-gradient(rgba(var(--accent-dark), 66%), rgba(var(--accent-dark), 33%));
+    padding: 1.5rem;
+    border-radius: 8px;
+  }
+
+  .post-card h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: rgb(var(--accent-light));
+  }
+
+  .metadata {
+    margin: 0.5rem 0;
+    color: #888;
+  }
+
+  .tags {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .tag {
+    background: rgba(var(--accent-light), 0.1);
+    color: rgb(var(--accent-light));
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+
+  .actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .button {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: rgba(var(--accent-light), 0.1);
+    color: rgb(var(--accent-light));
+    border: 1px solid rgba(var(--accent-light), 0.2);
+    border-radius: 4px;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+
+  .button:hover {
+    background: rgba(var(--accent-light), 0.2);
+  }
+
+  .button.delete {
+    background: rgba(255, 70, 70, 0.1);
+    color: rgb(255, 70, 70);
+    border-color: rgba(255, 70, 70, 0.2);
+  }
+
+  .button.delete:hover {
+    background: rgba(255, 70, 70, 0.2);
+  }
+</style>

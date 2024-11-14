@@ -1,0 +1,94 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { DBClient } from '../../db/client.js';
+
+const { slug } = Astro.params;
+const db = new DBClient();
+const post = await db.getPostBySlug(slug);
+db.close();
+
+if (!post) {
+  return Astro.redirect('/404');
+}
+---
+
+<Layout title={post.title}>
+  <article class="blog-post">
+    <h1>{post.title}</h1>
+    <div class="metadata">
+      <time>{new Date(post.date).toLocaleDateString('ja-JP')}</time>
+      {post.tags && (
+        <div class="tags">
+          {post.tags.map((tag: string) => (
+            <span class="tag">{tag}</span>
+          ))}
+        </div>
+      )}
+    </div>
+    <div class="content" set:html={post.content} />
+  </article>
+</Layout>
+
+<style>
+  .blog-post {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+    color: white;
+  }
+  
+  h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    background-image: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .metadata {
+    margin-bottom: 2rem;
+    color: #888;
+  }
+
+  .tags {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .tag {
+    background: rgba(var(--accent-light), 0.1);
+    color: rgb(var(--accent-light));
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+
+  .content {
+    line-height: 1.6;
+  }
+
+  .content :global(h1) {
+    font-size: 2rem;
+    margin: 2rem 0 1rem;
+  }
+
+  .content :global(h2) {
+    font-size: 1.5rem;
+    margin: 1.5rem 0 1rem;
+    color: rgb(var(--accent-light));
+  }
+
+  .content :global(p) {
+    margin: 1rem 0;
+  }
+
+  .content :global(ul) {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+  }
+
+  .content :global(li) {
+    margin: 0.5rem 0;
+  }
+</style>

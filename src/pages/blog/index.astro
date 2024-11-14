@@ -1,0 +1,99 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { DBClient } from '../../db/client.js';
+
+const db = new DBClient();
+const posts = await db.getAllPosts();
+db.close();
+---
+
+<Layout title="ブログ記事一覧">
+  <main>
+    <h1>ブログ記事一覧</h1>
+    <div class="posts">
+      {posts.map(post => (
+        <article class="post-card">
+          <a href={`/blog/${post.slug}`}>
+            <h2>{post.title}</h2>
+            <div class="metadata">
+              <time>{new Date(post.date).toLocaleDateString('ja-JP')}</time>
+              {post.tags && (
+                <div class="tags">
+                  {post.tags.map((tag: string) => (
+                    <span class="tag">{tag}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </a>
+        </article>
+      ))}
+    </div>
+  </main>
+</Layout>
+
+<style>
+  main {
+    margin: auto;
+    padding: 1rem;
+    width: 800px;
+    max-width: calc(100% - 2rem);
+    color: white;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    background-image: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .posts {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .post-card {
+    border: 1px solid rgba(var(--accent-light), 25%);
+    background: linear-gradient(rgba(var(--accent-dark), 66%), rgba(var(--accent-dark), 33%));
+    padding: 1.5rem;
+    border-radius: 8px;
+    transition: transform 0.2s;
+  }
+
+  .post-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .post-card a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .post-card h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: rgb(var(--accent-light));
+  }
+
+  .metadata {
+    margin-top: 0.5rem;
+    color: #888;
+  }
+
+  .tags {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .tag {
+    background: rgba(var(--accent-light), 0.1);
+    color: rgb(var(--accent-light));
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+</style>

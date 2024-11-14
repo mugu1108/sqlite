@@ -1,0 +1,234 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { DBClient } from '../../db/client.js';
+
+const db = new DBClient();
+const tags = await db.getAllTags();
+db.close();
+---
+
+<Layout title="新規投稿">
+  <main>
+    <h1>新規投稿</h1>
+    <form id="post-form" class="post-form">
+      <div class="form-group">
+        <label for="title">タイトル</label>
+        <input type="text" id="title" name="title" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="slug">スラッグ</label>
+        <input type="text" id="slug" name="slug" required pattern="[a-z0-9-]+">
+        <small>英数字とハイフンのみ使用可能</small>
+      </div>
+
+      <div class="form-group">
+        <label for="content">本文 (Markdown)</label>
+        <textarea id="content" name="content" rows="10" required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="tags">タグ</label>
+        <div class="tags-input">
+          <input type="text" id="tag-input" list="tag-suggestions">
+          <datalist id="tag-suggestions">
+            {tags.map(tag => <option value={tag} />)}
+          </datalist>
+          <button type="button" id="add-tag" class="button">追加</button>
+        </div>
+        <div id="selected-tags" class="selected-tags"></div>
+        <input type="hidden" id="tags" name="tags">
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="button">投稿</button>
+        <a href="/admin" class="button secondary">キャンセル</a>
+      </div>
+    </form>
+  </main>
+</Layout>
+
+<script>
+  const form = document.getElementById('post-form');
+  const tagInput = document.getElementById('tag-input');
+  const addTagButton = document.getElementById('add-tag');
+  const selectedTags = document.getElementById('selected-tags');
+  const tagsField = document.getElementById('tags');
+  const tags = new Set();
+
+  function updateTags() {
+    selectedTags.innerHTML = '';
+    tagsField.value = JSON.stringify([...tags]);
+    
+    tags.forEach(tag => {
+      const tagElement = document.createElement('span');
+      tagElement.className = 'tag';
+      tagElement.innerHTML = `
+        ${tag}
+        <button type="button" class="remove-tag" data-tag="${tag}">&times;</button>
+      `;
+      selectedTags.appendChild(tagElement);
+    });
+  }
+
+  addTagButton.addEventListener('click', () => {
+    const tag = tagInput.value.trim();
+    if (tag && !tags.has(tag)) {
+      tags.add(tag);
+      updateTags();
+      tagInput.value = '';
+    }
+  });
+
+  selectedTags.addEventListener('click', (e) => {
+    if (e.target.classList.contains('remove-tag')) {
+      const tag = e.target.dataset.tag;
+      tags.delete(tag);
+      updateTags();
+    }
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(form);
+    const data = {
+      title: formData.get('title'),
+      slug: formData.get('slug'),
+      content: formData.get('content'),
+      date: new Date().toISOString().split('T')[0],
+      tags: JSON.parse(formData.get('tags') || '[]')
+    };
+
+    try {
+      const response = await fetch('/api/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (response.ok) {
+        window.location.href = '/admin';
+      } else {
+        alert('投稿の作成に失敗しました');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('投稿の作成に失敗しました');
+    }
+  });
+</script>
+
+<style>
+  main {
+    margin: auto;
+    padding: 1rem;
+    width: 800px;
+    max-width: calc(100% - 2rem);
+    color: white;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    background-image: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .post-form {
+    background: linear-gradient(rgba(var(--accent-dark), 66%), rgba(var(--accent-dark), 33%));
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid rgba(var(--accent-light), 25%);
+  }
+
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: rgb(var(--accent-light));
+  }
+
+  input[type="text"],
+  textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid rgba(var(--accent-light), 0.2);
+    border-radius: 4px;
+    background: rgba(var(--accent-dark), 0.5);
+    color: white;
+  }
+
+  small {
+    display: block;
+    margin-top: 0.25rem;
+    color: #888;
+  }
+
+  .tags-input {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .selected-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .tag {
+    background: rgba(var(--accent-light), 0.1);
+    color: rgb(var(--accent-light));
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .remove-tag {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+    font-size: 1.2rem;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+  }
+
+  .button {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: rgba(var(--accent-light), 0.1);
+    color: rgb(var(--accent-light));
+    border: 1px solid rgba(var(--accent-light), 0.2);
+    border-radius: 4px;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+
+  .button:hover {
+    background: rgba(var(--accent-light), 0.2);
+  }
+
+  .button.secondary {
+    background: transparent;
+  }
+</style>
